@@ -4,6 +4,10 @@ const Message = require('../models/message.model');
 
 const onlineUsers = new Map();
 
+function emitOnlineUsers(io) {
+  io.emit('onlineUsers', Array.from(onlineUsers.keys()));
+}
+
 function setupSocket(server) {
   const io = new Server(server, {
     cors: {
@@ -20,10 +24,19 @@ function setupSocket(server) {
         return;
       }
 
-      socket.userId = userId;
-      onlineUsers.set(userId, socket.id);
+      const normalizedUserId = userId.toString();
 
-      console.log(`User connected: ${userId}`);
+      socket.userId = normalizedUserId;
+      onlineUsers.set(normalizedUserId, socket.id);
+
+      socket.emit('setupComplete', {
+        userId: normalizedUserId,
+        socketId: socket.id,
+      });
+
+      emitOnlineUsers(io);
+
+      console.log(`User connected: ${normalizedUserId}`);
     });
 
     socket.on('joinConversation', (conversationId) => {
@@ -98,8 +111,9 @@ function setupSocket(server) {
     });
 
     socket.on('disconnect', () => {
-      if (socket.userId) {
+      if (socket.userId && onlineUsers.get(socket.userId) === socket.id) {
         onlineUsers.delete(socket.userId);
+        emitOnlineUsers(io);
         console.log(`User disconnected: ${socket.userId}`);
       } else {
         console.log(`Socket disconnected: ${socket.id}`);

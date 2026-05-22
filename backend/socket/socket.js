@@ -133,17 +133,7 @@ function setupSocket(server) {
         conversation.lastMessageTime = new Date();
         await conversation.save();
 
-        const receiverId = conversation.participants.find(
-          (participantId) => participantId.toString() !== socket.userId
-        );
-
-        if (receiverId) {
-          const receiverSocketId = onlineUsers.get(receiverId.toString());
-
-          if (receiverSocketId) {
-            io.to(receiverSocketId).emit('receiveMessage', savedMessage);
-          }
-        }
+        io.to(conversationId).emit('receiveMessage', savedMessage);
 
         if (callback) {
           callback(savedMessage);

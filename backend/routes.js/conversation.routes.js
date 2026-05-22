@@ -9,5 +9,10 @@ conversationRouter.get(
   authMiddleware.authenticateToken,
   conversationController.getUserConversations
 );
+conversationRouter.get(
+  '/:conversationId/messages',
+  authMiddleware.authenticateToken,
+  conversationController.getConversationMessages
+);
 
 module.exports = conversationRouter;

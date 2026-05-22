@@ -48,6 +48,53 @@ function setupSocket(server) {
       console.log(`Socket ${socket.id} joined room: ${conversationId}`);
     });
 
+    socket.on('typing', (conversationId) => {
+      if (!socket.userId || !conversationId) {
+        return;
+      }
+
+      socket.to(conversationId).emit('typing', {
+        conversationId,
+        userId: socket.userId,
+      });
+    });
+
+    socket.on('stopTyping', (conversationId) => {
+      if (!socket.userId || !conversationId) {
+        return;
+      }
+
+      socket.to(conversationId).emit('stopTyping', {
+        conversationId,
+        userId: socket.userId,
+      });
+    });
+
+    socket.on('seen', async (data) => {
+      try {
+        const { conversationId, userId } = data || {};
+
+        if (!socket.userId || !conversationId || !userId) {
+          return;
+        }
+
+        await Message.updateMany(
+          {
+            conversationId,
+            sender: { $ne: userId },
+          },
+          { $set: { status: 'seen' } }
+        );
+
+        io.to(conversationId).emit('messagesSeen', {
+          conversationId,
+          userId,
+        });
+      } catch (error) {
+        console.error('Message seen error:', error);
+      }
+    });
+
     socket.on('sendMessage', async (data, callback) => {
       try {
         const { conversationId, text } = data || {};

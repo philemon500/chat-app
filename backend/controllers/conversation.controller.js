@@ -46,9 +46,17 @@ async function getConversationMessages(req, res) {
       });
     }
 
-    const currentPage = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 20;
-    const skip = (currentPage - 1) * limit;
+    // parse query params to numbers with sensible defaults
+    const parsedPage = parseInt(req.query.page, 10);
+    const parsedLimit = parseInt(req.query.limit, 10);
+
+    const currentPage = Number.isNaN(parsedPage) ? 1 : parsedPage;
+    const limit = Number.isNaN(parsedLimit) ? 20 : parsedLimit;
+
+    // ensure positive integers
+    const page = Math.max(1, currentPage);
+    const perPage = Math.max(1, limit);
+    const skip = (page - 1) * perPage;
 
     const conversation = await Conversation.findOne({
       _id: conversationId,
@@ -62,14 +70,14 @@ async function getConversationMessages(req, res) {
     }
 
     const messages = await Message.find({ conversationId })
-      .sort({ createdAt: 1 })
+      .sort({ createdAt: 1 }) // oldest first for chat rendering
       .skip(skip)
-      .limit(limit);
+      .limit(perPage);
 
     const totalMessages = await Message.countDocuments({ conversationId });
 
     return res.status(200).json({
-      currentPage,
+      currentPage: page,
       totalMessages,
       messages,
     });

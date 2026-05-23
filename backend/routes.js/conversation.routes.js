@@ -4,6 +4,11 @@ const authMiddleware = require('../middleware/auth.middleware');
 
 const conversationRouter = Router();
 
+conversationRouter.post(
+  '/',
+  authMiddleware.authenticateToken,
+  conversationController.createOrGetOneToOneConversation
+);
 conversationRouter.get(
   '/',
   authMiddleware.authenticateToken,

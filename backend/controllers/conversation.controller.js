@@ -1,6 +1,70 @@
 const mongoose = require('mongoose');
 const Conversation = require('../models/conversation.model');
 const Message = require('../models/message.model');
+const User = require('../models/user.model');
+
+function formatConversation(conversation) {
+  return {
+    _id: conversation._id,
+    participants: conversation.participants.map((participant) => ({
+      _id: participant._id,
+      name: participant.username,
+      email: participant.email,
+    })),
+    lastMessage: conversation.lastMessage,
+    lastMessageTime: conversation.lastMessageTime,
+    createdAt: conversation.createdAt,
+    updatedAt: conversation.updatedAt,
+  };
+}
+
+async function createOrGetOneToOneConversation(req, res) {
+  try {
+    const currentUserId = req.user.userId;
+    const { participantId } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(participantId)) {
+      return res.status(400).json({
+        message: 'Invalid participant ID',
+      });
+    }
+
+    if (participantId === currentUserId) {
+      return res.status(400).json({
+        message: 'You cannot create a conversation with yourself',
+      });
+    }
+
+    const participant = await User.findById(participantId);
+
+    if (!participant) {
+      return res.status(404).json({
+        message: 'Participant not found',
+      });
+    }
+
+    let conversation = await Conversation.findOne({
+      participants: { $all: [currentUserId, participantId], $size: 2 },
+    }).populate('participants', 'username email');
+
+    if (!conversation) {
+      conversation = await Conversation.create({
+        participants: [currentUserId, participantId],
+      });
+
+      conversation = await conversation.populate('participants', 'username email');
+    }
+
+    return res.status(200).json({
+      conversation: formatConversation(conversation),
+    });
+  } catch (error) {
+    console.error('Create or get conversation error:', error);
+    return res.status(500).json({
+      message: 'Server error',
+    });
+  }
+}
 
 async function getUserConversations(req, res) {
   try {
@@ -61,7 +125,7 @@ async function getConversationMessages(req, res) {
     const conversation = await Conversation.findOne({
       _id: conversationId,
       participants: req.user.userId,
-    });
+    }).populate('participants', 'username email');
 
     if (!conversation) {
       return res.status(404).json({
@@ -70,6 +134,7 @@ async function getConversationMessages(req, res) {
     }
 
     const messages = await Message.find({ conversationId })
+      .populate('sender', 'username email')
       .sort({ createdAt: 1 }) // oldest first for chat rendering
       .skip(skip)
       .limit(perPage);
@@ -79,6 +144,7 @@ async function getConversationMessages(req, res) {
     return res.status(200).json({
       currentPage: page,
       totalMessages,
+      conversation: formatConversation(conversation),
       messages,
     });
   } catch (error) {
@@ -90,6 +156,7 @@ async function getConversationMessages(req, res) {
 }
 
 module.exports = {
+  createOrGetOneToOneConversation,
   getUserConversations,
   getConversationMessages,
 };

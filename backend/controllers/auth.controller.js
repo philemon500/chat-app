@@ -5,18 +5,29 @@ const jwt = require('jsonwebtoken');
 async function register (req, res) {
   try {
     const { username, email, password } = req.body;
-    const existingUser = await User.findOne({ email });
+    const normalizedEmail = email?.trim().toLowerCase();
+    const trimmedUsername = username?.trim();
+
+    if (!trimmedUsername || !normalizedEmail || !password) {
+      return res.status(400).json({ message: 'Username, email and password are required' });
+    }
+
+    const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
-      return res.status(400).json({ message: 'Email already in use' });
+      return res.status(409).json({ message: 'Email already in use' });
     } else {
       const hashedPassword = await bcrypt.hash(password, 10); // In production, hash the password using bcrypt
-      const newUser = await User.create({ username, email, password: hashedPassword });
+      const newUser = await User.create({ username: trimmedUsername, email: normalizedEmail, password: hashedPassword });
       const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
       res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
       res.status(201).json({ message: 'User registered successfully', user: { id: newUser._id, username: newUser.username, email: newUser.email } });
     }
   }
   catch (error) {
+    if (error.code === 11000 && error.keyPattern?.email) {
+      return res.status(409).json({ message: 'Email already in use' });
+    }
+
     res.status(500).json({ message: 'Server error' });
   }
 }

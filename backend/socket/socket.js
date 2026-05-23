@@ -1,4 +1,5 @@
 const { Server } = require('socket.io');
+const mongoose = require('mongoose');
 const Conversation = require('../models/conversation.model');
 const Message = require('../models/message.model');
 
@@ -11,7 +12,7 @@ function emitOnlineUsers(io) {
 function setupSocket(server) {
   const io = new Server(server, {
     cors: {
-      origin: 'http://localhost:5173',
+      origin: true,
       credentials: true,
     },
   });
@@ -19,12 +20,19 @@ function setupSocket(server) {
   io.on('connection', (socket) => {
     console.log(`Socket connected: ${socket.id}`);
 
-    socket.on('setup', (userId) => {
+    socket.on('setup', (data) => {
+      const userId = typeof data === 'object' ? data?.userId : data;
+
       if (!userId) {
         return;
       }
 
       const normalizedUserId = userId.toString();
+
+      if (!mongoose.Types.ObjectId.isValid(normalizedUserId)) {
+        socket.emit('setupError', { message: 'Invalid user ID' });
+        return;
+      }
 
       socket.userId = normalizedUserId;
       onlineUsers.set(normalizedUserId, socket.id);
@@ -39,34 +47,48 @@ function setupSocket(server) {
       console.log(`User connected: ${normalizedUserId}`);
     });
 
-    socket.on('joinConversation', (conversationId) => {
+    socket.on('joinConversation', (data) => {
+      const conversationId = typeof data === 'object' ? data?.conversationId : data;
+
       if (!conversationId) {
         return;
       }
 
-      socket.join(conversationId);
+      socket.join(conversationId.toString());
       console.log(`Socket ${socket.id} joined room: ${conversationId}`);
     });
 
-    socket.on('typing', (conversationId) => {
-      if (!socket.userId || !conversationId) {
+    socket.on('getOnlineUsers', () => {
+      socket.emit('onlineUsers', Array.from(onlineUsers.keys()));
+    });
+
+    socket.on('typing', (data) => {
+      const conversationId = typeof data === 'object' ? data?.conversationId : data;
+      const userName = typeof data === 'object' ? data?.userName : undefined;
+      const userId = socket.userId || data?.userId?.toString();
+
+      if (!userId || !conversationId) {
         return;
       }
 
-      socket.to(conversationId).emit('typing', {
-        conversationId,
-        userId: socket.userId,
+      socket.to(conversationId.toString()).emit('typing', {
+        conversationId: conversationId.toString(),
+        userId,
+        userName,
       });
     });
 
-    socket.on('stopTyping', (conversationId) => {
-      if (!socket.userId || !conversationId) {
+    socket.on('stopTyping', (data) => {
+      const conversationId = typeof data === 'object' ? data?.conversationId : data;
+      const userId = socket.userId || data?.userId?.toString();
+
+      if (!userId || !conversationId) {
         return;
       }
 
-      socket.to(conversationId).emit('stopTyping', {
-        conversationId,
-        userId: socket.userId,
+      socket.to(conversationId.toString()).emit('stopTyping', {
+        conversationId: conversationId.toString(),
+        userId,
       });
     });
 
@@ -97,7 +119,9 @@ function setupSocket(server) {
 
     socket.on('sendMessage', async (data, callback) => {
       try {
-        const { conversationId, text } = data || {};
+        const { conversationId } = data || {};
+        const text = data?.text || data?.message?.text;
+        const trimmedText = text?.trim();
 
         if (!socket.userId) {
           if (callback) {
@@ -106,14 +130,17 @@ function setupSocket(server) {
           return;
         }
 
-        if (!conversationId || !text) {
+        if (!conversationId || !trimmedText) {
           if (callback) {
             callback({ error: 'conversationId and text are required' });
           }
           return;
         }
 
-        const conversation = await Conversation.findById(conversationId);
+        const conversation = await Conversation.findOne({
+          _id: conversationId,
+          participants: socket.userId,
+        });
 
         if (!conversation) {
           if (callback) {
@@ -125,18 +152,20 @@ function setupSocket(server) {
         const savedMessage = await Message.create({
           conversationId,
           sender: socket.userId,
-          text,
+          text: trimmedText,
           status: 'sent',
         });
 
-        conversation.lastMessage = text;
+        const populatedMessage = await savedMessage.populate('sender', 'username email');
+
+        conversation.lastMessage = trimmedText;
         conversation.lastMessageTime = new Date();
         await conversation.save();
 
-        io.to(conversationId).emit('receiveMessage', savedMessage);
+        io.to(conversationId).emit('receiveMessage', populatedMessage);
 
         if (callback) {
-          callback(savedMessage);
+          callback(populatedMessage);
         }
       } catch (error) {
         console.error('Send message error:', error);

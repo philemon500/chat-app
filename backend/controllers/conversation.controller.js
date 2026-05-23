@@ -76,18 +76,29 @@ async function getUserConversations(req, res) {
       .populate('participants', 'username email')
       .sort({ updatedAt: -1 });
 
-    const cleanConversations = conversations.map((conversation) => ({
-      id: conversation._id,
-      participants: conversation.participants.map((participant) => ({
-        id: participant._id,
-        name: participant.username,
-        email: participant.email,
-      })),
-      lastMessage: conversation.lastMessage,
-      lastMessageTime: conversation.lastMessageTime,
-      createdAt: conversation.createdAt,
-      updatedAt: conversation.updatedAt,
-    }));
+    const cleanConversations = await Promise.all(
+      conversations.map(async (conversation) => {
+        const unreadCount = await Message.countDocuments({
+          conversationId: conversation._id,
+          sender: { $ne: userId },
+          status: 'sent',
+        });
+
+        return {
+          id: conversation._id,
+          participants: conversation.participants.map((participant) => ({
+            id: participant._id,
+            name: participant.username,
+            email: participant.email,
+          })),
+          lastMessage: conversation.lastMessage,
+          lastMessageTime: conversation.lastMessageTime,
+          unreadCount,
+          createdAt: conversation.createdAt,
+          updatedAt: conversation.updatedAt,
+        };
+      })
+    );
 
     return res.status(200).json({
       conversations: cleanConversations,
@@ -132,6 +143,15 @@ async function getConversationMessages(req, res) {
         message: 'Conversation not found',
       });
     }
+
+    await Message.updateMany(
+      {
+        conversationId,
+        sender: { $ne: req.user.userId },
+        status: 'sent',
+      },
+      { $set: { status: 'seen' } }
+    );
 
     const messages = await Message.find({ conversationId })
       .populate('sender', 'username email')

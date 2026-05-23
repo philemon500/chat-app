@@ -9,6 +9,16 @@ function emitOnlineUsers(io) {
   io.emit('onlineUsers', Array.from(onlineUsers.keys()));
 }
 
+function emitConversationUpdated(io, conversation) {
+  conversation.participants.forEach((participantId) => {
+    io.to(`user:${participantId.toString()}`).emit('conversationUpdated', {
+      conversationId: conversation._id.toString(),
+      lastMessage: conversation.lastMessage,
+      lastMessageTime: conversation.lastMessageTime,
+    });
+  });
+}
+
 function setupSocket(server) {
   const io = new Server(server, {
     cors: {
@@ -35,6 +45,7 @@ function setupSocket(server) {
       }
 
       socket.userId = normalizedUserId;
+      socket.join(`user:${normalizedUserId}`);
       onlineUsers.set(normalizedUserId, socket.id);
 
       socket.emit('setupComplete', {
@@ -112,6 +123,12 @@ function setupSocket(server) {
           conversationId,
           userId,
         });
+
+        const conversation = await Conversation.findById(conversationId);
+
+        if (conversation) {
+          emitConversationUpdated(io, conversation);
+        }
       } catch (error) {
         console.error('Message seen error:', error);
       }
@@ -163,6 +180,7 @@ function setupSocket(server) {
         await conversation.save();
 
         io.to(conversationId).emit('receiveMessage', populatedMessage);
+        emitConversationUpdated(io, conversation);
 
         if (callback) {
           callback(populatedMessage);

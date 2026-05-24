@@ -60,7 +60,7 @@ EXPO_PUBLIC_API_URL=http://localhost:3000
 # Run Frontend
 npx expo start --web
 or 
-npx expo start
+npx expo start (wait for initialbuild)
 
 # Authentication Flow
 Register → Login → JWT Token Generated → Access Chat List → Create Conversation → Realtime Messaging
@@ -80,7 +80,7 @@ GET /api/conversations/:conversationId/messages
 
 # Demo Credentials
 User 1:
-test2@test.com
+test@test.com
 password = test
 User 2:
 test3@test.com

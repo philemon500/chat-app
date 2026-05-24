@@ -53,8 +53,8 @@ npm run dev
 
 # Frontend Setup
 cd frontend
- npm install
- Create .env
+npm install
+Create .env
 EXPO_PUBLIC_API_URL=http://localhost:3000
 
 # Run Frontend

@@ -51,11 +51,6 @@ chat-app/
    npm install
 ```
 
-3. Start the app
-
-```bash
-   npx expo start
-```
 
 - Create .env
 
@@ -65,7 +60,7 @@ JWT_SECRET=6b036873f3bf8836b8a0422fa55923764db53534b241340066d5c882373f5366
 
 # Start backend server
 
-4. Start the app
+3. Start the app
 
 ```bash
    npm run dev

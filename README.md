@@ -40,30 +40,70 @@ chat-app/
     README.md
 
 # Backend Setup
-cd backend
- npm install
- Create .env
+1. Change directory 
+
+```bash
+   cd backend
+```
+2. Install dependencies
+
+```bash
+   npm install
+```
+
+3. Start the app
+
+```bash
+   npx expo start
+```
+
+- Create .env
 
 MONGO_URI=mongodb://phil:phil1234@ac-in99lgm-shard-00-00.o4owdww.mongodb.net:27017,ac-in99lgm-shard-00-01.o4owdww.mongodb.net:27017,ac-in99lgm-shard-00-02.o4owdww.mongodb.net:27017/?ssl=true&replicaSet=atlas-jq1euo-shard-0&authSource=admin&appName=Cluster0
 
 JWT_SECRET=6b036873f3bf8836b8a0422fa55923764db53534b241340066d5c882373f5366
 
 # Start backend server
-npm run dev
+
+4. Start the app
+
+```bash
+   npm run dev
+```
+
+
 
 # Frontend Setup
-cd frontend
-npm install
-Create .env
+1. Change Diectory
+```bash
+    cd frontend
+```
+2. Install dependencies
+
+```bash
+   npm install
+```
+
+- Create .env
+
 EXPO_PUBLIC_API_URL=http://localhost:3000
 
 # Run Frontend
+```bash
 npx expo start --web
+```
 or 
+```bash
 npx expo start (wait for initialbuild)
+```
 
 # Authentication Flow
-Register → Login → JWT Token Generated → Access Chat List → Create Conversation → Realtime Messaging
+Register 
+→ Login 
+→ JWT Token Generated 
+→ Access Chat List 
+→ Create Conversation 
+→ Realtime Messaging
 
 # Architecture Decisions
 - Socket.io was used for realtime messaging, typing indicators, seen status, and online user tracking.
@@ -72,11 +112,11 @@ Register → Login → JWT Token Generated → Access Chat List → Create Conve
 - Gifted Chat was used to simplify chat UI and message handling.
 
 # API Endpoints
-POST /api/auth/register
-POST /api/auth/login
-POST /api/conversations
-GET /api/conversations
-GET /api/conversations/:conversationId/messages
+- POST /api/auth/register
+- POST /api/auth/login
+- POST /api/conversations
+- GET /api/conversations
+- GET /api/conversations/:conversationId/messages
 
 # Demo Credentials
 User 1:

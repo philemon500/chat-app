@@ -18,7 +18,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.philexpo123.frontend"
+      "package": "com.philexpo123.frontend",
+      "softwareKeyboardLayoutMode": "pan"
     },
     "web": {
       "output": "static",

@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import {Platform} from 'react-native';
+import {Platform, KeyboardAvoidingView} from 'react-native';
 import axios from 'axios';
 import { GiftedChat, Send } from 'react-native-gifted-chat';
 import {
@@ -312,6 +312,10 @@ export default function Chat() {
       : 'Offline';
 
   return (
+    <KeyboardAvoidingView
+     style={styles.container}
+     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+  >
     <View style={styles.container}>
       <SafeAreaView style={styles.headerSafeArea}>
         <View style={styles.header}>
@@ -350,10 +354,12 @@ export default function Chat() {
         </View>
       </SafeAreaView>
 
+      <SafeAreaView style={{ flex: 1 }}>          
       <GiftedChat
         messages={messages}
         onSend={onSend}
         bottomOffset={Platform.OS === 'android' ? 40 : 0}
+        keyboardShouldPersistTaps="handled"
         renderSend={(props) => (
           <Send {...props} containerStyle={styles.sendContainer}>
             <View style={styles.sendButton}>
@@ -386,7 +392,10 @@ export default function Chat() {
         showUserAvatar
         showAvatarForEveryMessage
       />
+      </SafeAreaView>
     </View>
+    </KeyboardAvoidingView>
+
   );
 }
 

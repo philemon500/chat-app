@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
+import {Platform} from 'react-native';
 import axios from 'axios';
 import { GiftedChat, Send } from 'react-native-gifted-chat';
 import {
@@ -352,6 +353,7 @@ export default function Chat() {
       <GiftedChat
         messages={messages}
         onSend={onSend}
+        bottomOffset={Platform.OS === 'android' ? 40 : 0}
         renderSend={(props) => (
           <Send {...props} containerStyle={styles.sendContainer}>
             <View style={styles.sendButton}>
